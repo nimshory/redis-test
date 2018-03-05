@@ -1,21 +1,20 @@
-var redis = require('redis');
-var async = require('async');
+const redis = require('redis');
+const async = require('async');
+const config = require("./config");
+const db = require("./db");
 
-var osClient = redis.createClient("redis://35.172.181.122:6379");
-var enClient = redis.createClient("redis://54.227.174.214:15261");
+const osClient = db.osClient;
+const enClient = db.enClient;
 
 // show redis errors if they occur
 osClient.on('error', (err) => console.log("Error on Redis OS", err));
 enClient.on('error', (err) => console.log("Error on Redis Enterprise", err));
 
-// show that connection was established
-osClient.on('connect', () => {
-    console.log("Connected to Redis OS");
+// wait for connection to be established
+db.ready.then(() => {
+    console.log("Connected to Redis Servers");
     start();
 });
-
-enClient.on('connect', () => console.log("Connected to Redis Enterprise"));
-
 
 const start = () => {
     async.waterfall([
@@ -35,7 +34,7 @@ const start = () => {
         function (replies, callback) {
             // retrieve the results from the replica
             // ordered from highest to lowest
-            osClient.zrevrange("numbers", 0, -1, "withscores", callback)
+            enClient.zrevrange("numbers", 0, -1, "withscores", callback)
         },
         function (members, callback) {
             // parsing the results - getting only the values
